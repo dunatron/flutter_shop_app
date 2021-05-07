@@ -37,9 +37,7 @@ class Cart with ChangeNotifier {
   }
 
   void addItem(String productId, double price, String title) {
-    var message = '';
     if (_items.containsKey(productId)) {
-      message = 'Cart item quantity updated';
       _items.update(
         productId,
         (existing) => CartItem(
@@ -49,7 +47,6 @@ class Cart with ChangeNotifier {
             quantity: existing.quantity + 1),
       );
     } else {
-      message = 'Item added to cart';
       _items.putIfAbsent(
         productId,
         () => CartItem(
@@ -60,19 +57,35 @@ class Cart with ChangeNotifier {
         ),
       );
     }
-    Fluttertoast.showToast(
-        msg: message,
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.CENTER,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0);
+
     notifyListeners();
   }
 
   void removeItem(String productId) {
     _items.remove(productId);
+    notifyListeners();
+  }
+
+  void removeSingleItem(String productId) {
+    // quantity is 0 || doesnt exist
+    if (!_items.containsKey(productId)) {
+      return;
+    }
+    // quantity greater than 1
+    if (_items[productId].quantity > 1) {
+      _items.update(
+          productId,
+          (existingCartIem) => CartItem(
+                id: existingCartIem.id,
+                title: existingCartIem.title,
+                price: existingCartIem.price,
+                quantity: existingCartIem.quantity - 1,
+              ));
+    }
+    // quantity is exactly 1 item
+    else {
+      _items.remove(productId);
+    }
     notifyListeners();
   }
 
