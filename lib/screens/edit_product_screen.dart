@@ -278,11 +278,11 @@ class _EditProductScreenState extends State<EditProductScreen> {
                                   !value.startsWith('https')) {
                                 return 'Please enter a vlaid URL';
                               }
-                              if (!value.endsWith('.png') &&
-                                  !value.endsWith('.png') &&
-                                  !value.endsWith('jpeg')) {
-                                return 'Please return a valid image URL';
-                              }
+                              // if (!value.endsWith('.png') &&
+                              //     !value.endsWith('.png') &&
+                              //     !value.endsWith('jpeg')) {
+                              //   return 'Please return a valid image URL';
+                              // }
                               return null;
                             },
                             onFieldSubmitted: (_) {

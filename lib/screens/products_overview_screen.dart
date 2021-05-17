@@ -28,13 +28,21 @@ class _ProductsOverviewScreenState extends State<ProductsOverviewScreen> {
     setState(() {
       _isLoading = true;
     });
-    Provider.of<ProductsProvider>(context, listen: false)
-        .fetchAndSetProducts()
-        .then((_) {
+    try {
+      Provider.of<ProductsProvider>(context, listen: false)
+          .fetchAndSetProducts()
+          .then((_) {
+        // setState(() {
+        //   _isLoading = false;
+        // });
+      });
+    } catch (error) {
+      print("WELL WE CATCH IT HERE");
+    } finally {
       setState(() {
         _isLoading = false;
       });
-    });
+    }
     super.initState();
   }
 

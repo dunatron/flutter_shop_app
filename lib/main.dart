@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 //screens
+import './screens/splash_screen.dart';
 import './screens/auth_screen.dart';
 import './screens/products_overview_screen.dart';
 import './screens/product_detail_screen.dart';
@@ -15,6 +16,9 @@ import './providers/auth.dart';
 import './providers/products_provider.dart';
 import './providers/cart.dart';
 import './providers/orders.dart';
+
+// helpers
+import './helpers/custom_route.dart';
 
 void main() {
   runApp(MyApp());
@@ -32,16 +36,28 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProxyProvider<Auth, ProductsProvider>(
           create: (ctx) => ProductsProvider(
             null,
+            null,
             [],
           ), //pretty sure it cant be right.. unsure if this is correct. https://pro.academind.com/courses/learn-flutter-dart-to-build-ios-android-apps-2020/lectures/13912414
-          update: (ctx, auth, previousProducts) =>
-              ProductsProvider(auth.token, previousProducts.items),
+          update: (ctx, auth, previousProducts) => ProductsProvider(
+            auth.token,
+            auth.userId,
+            previousProducts == null ? [] : previousProducts.items,
+          ),
         ),
         ChangeNotifierProvider(
           create: (ctx) => Cart(), // cart provider
         ),
-        ChangeNotifierProvider(
-          create: (ctx) => Orders(), // orders provider
+        // ChangeNotifierProvider(
+        //   create: (ctx) => Orders(), // orders provider
+        // ),
+        ChangeNotifierProxyProvider<Auth, Orders>(
+          create: (ctx) => Orders(null, null, []),
+          update: (ctx, auth, previousOrders) => Orders(
+            auth.token,
+            auth.userId,
+            previousOrders == null ? [] : previousOrders.orders,
+          ),
         ),
       ],
       child: Consumer<Auth>(
@@ -52,11 +68,25 @@ class MyApp extends StatelessWidget {
           showPerformanceOverlay: false,
           title: 'Shop Application',
           theme: ThemeData(
-              primarySwatch: Colors.purple,
-              accentColor: Colors.deepOrange,
-              fontFamily: 'Lato'),
+            primarySwatch: Colors.purple,
+            accentColor: Colors.blue,
+            fontFamily: 'Lato',
+            // pageTransitionsTheme: PageTransitionsTheme(builders: {
+            //   TargetPlatform.android: CustomPageTransitionBuilder(),
+            //   TargetPlatform.iOS: CustomPageTransitionBuilder()
+            // }),
+          ),
           // home: ProductsOverviewScreen(),
-          home: authData.isAuth ? ProductsOverviewScreen() : AuthScreen(),
+          home: authData.isAuth
+              ? ProductsOverviewScreen()
+              : FutureBuilder(
+                  future: authData.tryAutoLogin(),
+                  builder: (ctx, authResultSnapshot) =>
+                      authResultSnapshot.connectionState ==
+                              ConnectionState.waiting
+                          ? SplashScreen()
+                          : AuthScreen(),
+                ),
           routes: {
             ProductDetailScreen.routeName: (ctx) => ProductDetailScreen(),
             CartScreen.routeName: (ctx) => CartScreen(),

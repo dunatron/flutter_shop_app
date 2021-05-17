@@ -7,10 +7,11 @@ import './product.dart';
 
 class ProductsProvider with ChangeNotifier {
   final String authToken;
+  final String userId;
 
   List<Product> _items = [];
 
-  ProductsProvider(this.authToken, this._items);
+  ProductsProvider(this.authToken, this.userId, this._items);
 
   List<Product> get items {
     return [..._items];
@@ -24,16 +25,28 @@ class ProductsProvider with ChangeNotifier {
     return _items.firstWhere((prod) => prod.id == id);
   }
 
-  Future<void> fetchAndSetProducts() async {
-    final url = Uri.parse(
-        'https://fluttershop-9a023-default-rtdb.firebaseio.com/products.json?auth$authToken');
+  Future<void> fetchAndSetProducts([bool filterByUser = false]) async {
+    final filterString =
+        filterByUser ? 'orderBy="creatorId"&equalTo="$userId"' : '';
+    var url = Uri.parse(
+        'https://fluttershop-9a023-default-rtdb.firebaseio.com/products.json?auth$authToken&$filterString');
     try {
       final response = await http.get(url);
+
       final extractedData = json.decode(response.body) as Map<String, dynamic>;
-      final List<Product> loadedProducts = [];
+
+      print(extractedData.toString());
       if (extractedData == null) {
         return;
       }
+      if (extractedData['error'] != null) {
+        return;
+      }
+      url = Uri.parse(
+          'https://fluttershop-9a023-default-rtdb.firebaseio.com/userFavorites/$userId.json?auth=$authToken');
+      final favoriteRes = await http.get(url);
+      final favoriteData = json.decode(favoriteRes.body);
+      final List<Product> loadedProducts = [];
       extractedData.forEach((prodId, prodData) {
         loadedProducts.add(Product(
           id: prodId,
@@ -41,13 +54,17 @@ class ProductsProvider with ChangeNotifier {
           price: prodData['price'].toDouble(),
           description: prodData['description'],
           imageUrl: prodData['imageUrl'],
-          isFavorite: prodData['isFavorite'],
+          isFavorite: favoriteData == null
+              ? false
+              : favoriteData[prodId] ??
+                  false, // ?? means if we have it use it else fallback to value after the ?? which is false
         ));
       });
       _items = loadedProducts;
-      notifyListeners();
     } catch (error) {
       throw error;
+    } finally {
+      notifyListeners();
     }
   }
 
@@ -55,7 +72,7 @@ class ProductsProvider with ChangeNotifier {
     // final url =
     //     'https://fluttershop-9a023-default-rtdb.firebaseio.com/products.json';
     final url = Uri.parse(
-        'https://fluttershop-9a023-default-rtdb.firebaseio.com/products.json');
+        'https://fluttershop-9a023-default-rtdb.firebaseio.com/products.json?auth=$authToken');
     try {
       final response = await http.post(
         url,
@@ -65,7 +82,7 @@ class ProductsProvider with ChangeNotifier {
             'description': product.description,
             'imageUrl': product.imageUrl,
             'price': product.price,
-            'isFavorite': product.isFavorite,
+            'creatorId': userId
           },
         ),
       );
@@ -86,7 +103,7 @@ class ProductsProvider with ChangeNotifier {
 
   Future<void> updateProduct(String id, Product newProduct) async {
     final itemUrl = Uri.parse(
-        'https://fluttershop-9a023-default-rtdb.firebaseio.com/products/$id.json');
+        'https://fluttershop-9a023-default-rtdb.firebaseio.com/products/$id.json?auth=$authToken');
     await http.patch(itemUrl,
         body: json.encode({
           'title': newProduct.title,
@@ -101,7 +118,7 @@ class ProductsProvider with ChangeNotifier {
 
   Future<void> deleteProduct(String id) async {
     final url = Uri.parse(
-        'https://fluttershop-9a023-default-rtdb.firebaseio.com/products/$id.json');
+        'https://fluttershop-9a023-default-rtdb.firebaseio.com/products/$id.json?auth=$authToken');
     final existingProductIndex = _items.indexWhere((prod) => prod.id == id);
     var existingProduct = _items[existingProductIndex];
     _items.removeAt(existingProductIndex);
